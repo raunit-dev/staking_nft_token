@@ -23,5 +23,7 @@ pub mod staking_nft_token {
         ctx.accounts.init_user(&ctx.bumps)
     }
 
-    
+    pub fn stake_sol(ctx: Context<StakeSol>, stake_amount: u64) -> Result<()> {
+        ctx.accounts.stake_sol(stake_amount, &ctx.bumps)
+    }
 }
