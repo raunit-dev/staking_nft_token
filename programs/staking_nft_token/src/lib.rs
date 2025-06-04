@@ -22,4 +22,6 @@ pub mod staking_nft_token {
     pub fn init_user(ctx: Context<InitUser>) -> Result<()> {
         ctx.accounts.init_user(&ctx.bumps)
     }
+
+    
 }
