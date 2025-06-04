@@ -1,8 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint,Token};
 
-
-use crate StakeConfigAccount;
+use crate::state::stake_config_account::StakeConfigAccount;
 
 #[derive(Accounts)]
 pub struct InitializeConfig<'info> {
@@ -39,6 +38,7 @@ impl<'info> InitializeConfig<'info> {
             reward_bump: bumps.reward_mint,
             bump: bumps.config
         });
+        Ok(())
     }
 }
 

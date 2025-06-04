@@ -15,7 +15,7 @@ declare_id!("jgvGJazuaFWvM2185R6C19e1DKqer3kMZz3gJBP1eA9");
 pub mod staking_nft_token {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize::handler(ctx)
+    pub fn init_config(ctx: Context<InitializeConfig>, points_per_nft_stake: u8, points_per_spl_stake: u8, points_per_sol_stake: u8, min_freeze_period: u32) -> Result<()> {
+        ctx.accounts.init_config(points_per_nft_stake, points_per_spl_stake, points_per_sol_stake, min_freeze_period, &ctx.bumps)
     }
 }
