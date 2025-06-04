@@ -15,6 +15,7 @@ pub struct InitializeConfig<'info> {
         bump
     )]
     pub config: Account<'info,StakeConfigAccount>,
+
     #[account(
         init,
         payer = admin,
@@ -24,6 +25,7 @@ pub struct InitializeConfig<'info> {
         mint::authority = config
     )]
     pub reward_mint: Account<'info,Mint>,
+
     pub token_program: Program<'info,Token>,
     pub system_program: Program<'info,System>
 }
