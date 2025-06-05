@@ -5,7 +5,6 @@ use crate::state::StakeConfigAccount;
 use crate::state::UserAccount;
 use crate::state::StakeAccount;
 
-use crate::error::ErrorCode;
 
 #[derive(Accounts)]
 pub struct StakeSol<'info> {
@@ -115,4 +114,19 @@ impl <'info> StakeSol <'info> {
 
         mint_to(ctx, amount)
     }
+}
+
+
+
+
+#[error_code]
+pub enum ErrorCode {
+     #[msg("Freeze Periode Not Passed")]
+    FreezePeriodeNotPassed,
+
+    #[msg("Invalid admin")]
+    InvalidAdmin,
+
+    #[msg("Over Flow")]
+    OverFlow,
 }
