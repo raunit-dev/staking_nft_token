@@ -1,10 +1,12 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
 use anchor_spl::token::{ Mint, Token, TokenAccount};
 
-use crate::{error::ErrorCode, StakeAccount, StateConfig, UserAccount};
+use crate::state::StakeConfigAccount;
+use crate::state::UserAccount;
+use crate::state::StakeAccount;
 
 #[derive(Accounts)]
-pub struct UnStakeSOl <'info> {
+pub struct UnStakeSol <'info> {
 
     #[account(mut)]
     pub user: Signer<'info>,
@@ -55,7 +57,7 @@ pub struct UnStakeSOl <'info> {
     pub system_program: Program<'info, System>,
 } 
 
-impl <'info> UnStakeSOl <'info> {
+impl <'info> UnStakeSol <'info> {
     pub fn unstake_sol(&mut self) -> Result<()> {
 
         let staked_at = self.stake_account.staked_at;
@@ -89,4 +91,16 @@ impl <'info> UnStakeSOl <'info> {
     }
 
 
+}
+
+#[error_code]
+pub enum ErrorCode {
+     #[msg("Freeze Periode Not Passed")]
+    FreezePeriodeNotPassed,
+
+    #[msg("Invalid admin")]
+    InvalidAdmin,
+
+    #[msg("Over Flow")]
+    OverFlow,
 }
