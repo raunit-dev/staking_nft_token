@@ -1,10 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint,Token, TokenAccount};
 
 use crate::state::user_account::UserAccount;
 
 #[derive(Accounts)]
-pub struct InitUser<'info> {
+pub struct InitializeUser<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -20,8 +19,8 @@ pub struct InitUser<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> InitUser<'info> {
-    pub fn initialize_user(&mut self, bump: &InitUserBumps) -> Result<()> {
+impl<'info> InitializeUser<'info> {
+    pub fn initialize_user(&mut self, bump: &InitializeUserBumps) -> Result<()> {
         self.user_account.set_inner(UserAccount { 
             points: 0, 
             nft_staked_amount: 0, 

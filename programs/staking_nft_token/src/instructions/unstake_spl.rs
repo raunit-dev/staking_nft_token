@@ -20,6 +20,14 @@ pub struct UnStakeSPL<'info> {
 
     #[account(
         mut,
+        seeds = [b"rewards", config.key().as_ref()],
+        bump = config.reward_bump,
+        mint::authority = config,
+    )]
+    pub reward_mint: Account<'info, Mint>,
+
+    #[account(
+        mut,
         associated_token::mint = reward_mint,
         associated_token::authority = user,
     )]
