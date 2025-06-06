@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[account]
-#[derive(InitSpace,Debug)]
+#[derive(InitSpace)]
 pub struct StakeConfigAccount{
     pub points_per_nft_stake: u8,
     pub points_per_sol_stake: u8,

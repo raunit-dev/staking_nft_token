@@ -1,20 +1,20 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
-use anchor_spl::token::{ Mint, Token, TokenAccount};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::state::StakeConfigAccount;
-use crate::state::UserAccount;
-use crate::state::StakeAccount;
+use crate::state::{StakeConfigAccount, UserAccount, StakeAccount};
+use crate::error::ErrorCode;
 
 #[derive(Accounts)]
-pub struct UnStakeSol <'info> {
-
+pub struct UnstakeSol<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
+
+    pub mint: Account<'info, Mint>,
 
     #[account(
         mut,
         seeds = [b"rewards", config.key().as_ref()],
-        bump = config.rewards_bump,
+        bump = config.reward_bump,
         mint::authority = config,
     )]
     pub reward_mint: Account<'info, Mint>,
@@ -28,7 +28,7 @@ pub struct UnStakeSol <'info> {
 
     #[account(
         mut,
-        seeds = [b"stake", config.key().as_ref(), user.key().as_ref()], // seed so that user can stake multiple ammounts
+        seeds = [b"stake", config.key().as_ref(), user.key().as_ref(), mint.key().as_ref()],
         bump = stake_account.bump,
     )]
     pub stake_account: Account<'info, StakeAccount>,
@@ -37,7 +37,7 @@ pub struct UnStakeSol <'info> {
         seeds = [b"config"],
         bump = config.bump,
     )]
-    pub config: Account<'info, StateConfig>,
+    pub config: Account<'info, StakeConfigAccount>,
 
     #[account(
         mut,
@@ -57,12 +57,10 @@ pub struct UnStakeSol <'info> {
     pub system_program: Program<'info, System>,
 } 
 
-impl <'info> UnStakeSol <'info> {
+impl<'info> UnstakeSol<'info> {
     pub fn unstake_sol(&mut self) -> Result<()> {
-
         let staked_at = self.stake_account.staked_at;
         let current = Clock::get()?.unix_timestamp;
-
         require!(current.checked_sub(staked_at).unwrap() >= self.config.min_freeze_period as i64, ErrorCode::FreezePeriodeNotPassed);
 
         let seeds = &[
@@ -70,7 +68,6 @@ impl <'info> UnStakeSol <'info> {
             self.stake_account.to_account_info().key.as_ref(),
             &[self.stake_account.vault_bump],
         ];
-
         let signer_seeds = &[&seeds[..]];
 
         let cpi_program = self.system_program.to_account_info();
@@ -78,29 +75,10 @@ impl <'info> UnStakeSol <'info> {
             from: self.vault.to_account_info(),
             to: self.user.to_account_info(),
         };
-
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
-
         transfer(cpi_ctx, self.vault.lamports())?;
 
-        self.user_account.sol_staked_amount = self.user_account.sol_staked_amount.checked_sub(self.vault.lamports()).ok_or(ErrorCode::OverFlow)?;
-
-
+        self.user_account.sol_staked_amount = self.user_account.sol_staked_amount.checked_sub(self.vault.lamports()).ok_or(ErrorCode::Overflow)?;
         Ok(())
-
     }
-
-
-}
-
-#[error_code]
-pub enum ErrorCode {
-     #[msg("Freeze Periode Not Passed")]
-    FreezePeriodeNotPassed,
-
-    #[msg("Invalid admin")]
-    InvalidAdmin,
-
-    #[msg("Over Flow")]
-    OverFlow,
 }

@@ -31,7 +31,7 @@ pub struct InitializeConfig<'info> {
 }
 
 impl<'info> InitializeConfig<'info> {
-    pub fn init_config(&mut self,points_per_nft_stake: u8,points_per_spl_stake: u8,points_per_sol_stake: u8,min_freeze_period: u32,bumps: &InitializeConfigBumps) -> Result<()> {
+    pub fn initialize_config(&mut self,points_per_nft_stake: u8,points_per_spl_stake: u8,points_per_sol_stake: u8,min_freeze_period: u32,bumps: &InitializeConfigBumps) -> Result<()> {
         self.config.set_inner(StakeConfigAccount{
             points_per_nft_stake,
             points_per_sol_stake,

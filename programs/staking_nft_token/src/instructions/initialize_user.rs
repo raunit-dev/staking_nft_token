@@ -21,7 +21,7 @@ pub struct InitUser<'info> {
 }
 
 impl<'info> InitUser<'info> {
-    pub fn init_user(&mut self, bump: &InitUserBumps) -> Result<()> {
+    pub fn initialize_user(&mut self, bump: &InitUserBumps) -> Result<()> {
         self.user_account.set_inner(UserAccount { 
             points: 0, 
             nft_staked_amount: 0, 
