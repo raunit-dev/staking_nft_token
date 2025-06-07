@@ -9,7 +9,8 @@ use anchor_spl::{
     token::{approve, mint_to, Approve, Mint, MintTo, Token, TokenAccount},
 };
 
-use crate::{error::ErrorCode, StakeAccount, StateConfig, UserAccount};
+
+use crate::{error::ErrorCode, StakeAccount, StakeConfigAccount, UserAccount};
 
 #[derive(Accounts)]
 #[instruction(seed: u64)]
@@ -31,7 +32,7 @@ pub struct StakeNFT<'info> {
     #[account(
         mut,
         seeds = [b"rewards", config.key().as_ref()],
-        bump = config.rewards_bump,
+        bump = config.reward_bump,
         mint::authority = config,
     )]
     pub reward_mint: Account<'info, Mint>,
@@ -82,7 +83,7 @@ pub struct StakeNFT<'info> {
         seeds = [b"config"],
         bump = config.bump,
     )]
-    pub config: Account<'info, StateConfig>,
+    pub config: Account<'info, StakeConfigAccount>,
 
     #[account(
         mut,
@@ -143,17 +144,17 @@ impl<'info> StakeNFT<'info> {
             staked_at: Clock::get()?.unix_timestamp,
             bump: bumps.stake_account,
             vault_bump: 0,
-            seed: seed,
+            seed,
         });
 
-        let points_u64 = u64::try_from(self.config.points_per_nft_stake).or(Err(ErrorCode::OverFlow))?;
+        let points_u64 = u64::try_from(self.config.points_per_nft_stake).or(Err(ErrorCode::Overflow))?;
 
         let reward_amount = points_u64.checked_mul(1_000_000u64).unwrap();
 
         self.reward_user(reward_amount)?;
 
-        self.user_account.points = self.user_account.points.checked_add(reward_amount).ok_or(ErrorCode::OverFlow)?;
-        self.user_account.nft_staked_amount = self.user_account.nft_staked_amount.checked_add(1).ok_or(ErrorCode::OverFlow)?;
+        self.user_account.points = self.user_account.points.checked_add(reward_amount).ok_or(ErrorCode::Overflow)?;
+        self.user_account.nft_staked_amount = self.user_account.nft_staked_amount.checked_add(1).ok_or(ErrorCode::Overflow)?;
 
         Ok(())
     }

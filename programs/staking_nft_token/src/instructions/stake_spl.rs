@@ -8,6 +8,7 @@ use crate::state::{StakeConfigAccount, UserAccount, StakeAccount};
 use crate::error::ErrorCode;
 
 #[derive(Accounts)]
+#[instruction(seed: u64)]
 pub struct StakeSpl<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
@@ -46,6 +47,7 @@ pub struct StakeSpl<'info> {
     pub stake_account: Account<'info, StakeAccount>,
     
     #[account(
+        mut,
         seeds = [b"config"],
         bump = config.bump,
     )]
@@ -72,7 +74,7 @@ pub struct StakeSpl<'info> {
 } 
 
 impl<'info> StakeSpl<'info> {
-    pub fn stake_spl(&mut self, amount: u64, bumps: &StakeSplBumps) -> Result<()> {
+    pub fn stake_spl(&mut self,seed: u64,amount: u64, bumps: &StakeSplBumps) -> Result<()> {
         let cpi_program = self.token_program.to_account_info();
         let cpi_accounts = TransferChecked {
             from: self.mint_ata.to_account_info(),
@@ -96,7 +98,8 @@ impl<'info> StakeSpl<'info> {
             mint: self.mint.key(),
             staked_at: Clock::get()?.unix_timestamp,
             bump: bumps.stake_account,
-            vault_bump: 0
+            vault_bump: 0,
+            seed    
         });
         Ok(())
     }

@@ -5,7 +5,7 @@ use crate::state::{StakeConfigAccount, UserAccount, StakeAccount};
 use crate::error::ErrorCode;
 
 #[derive(Accounts)]
-pub struct UnstakeSol<'info> {
+pub struct UnStakeSoL<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -28,7 +28,7 @@ pub struct UnstakeSol<'info> {
 
     #[account(
         mut,
-        seeds = [b"stake", config.key().as_ref(), user.key().as_ref(), mint.key().as_ref()],
+        seeds = [b"stake", config.key().as_ref(), user.key().as_ref(), &stake_account.seed.to_le_bytes()],
         bump = stake_account.bump,
     )]
     pub stake_account: Account<'info, StakeAccount>,
@@ -57,7 +57,7 @@ pub struct UnstakeSol<'info> {
     pub system_program: Program<'info, System>,
 } 
 
-impl<'info> UnstakeSol<'info> {
+impl<'info> UnStakeSoL<'info> {
     pub fn unstake_sol(&mut self) -> Result<()> {
         let staked_at = self.stake_account.staked_at;
         let current = Clock::get()?.unix_timestamp;

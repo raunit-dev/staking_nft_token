@@ -4,6 +4,7 @@ use anchor_spl::token::{Mint,Token};
 use crate::state::stake_config_account::StakeConfigAccount;
 
 #[derive(Accounts)]
+
 pub struct InitializeConfig<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -38,7 +39,7 @@ impl<'info> InitializeConfig<'info> {
             points_per_spl_stake,
             min_freeze_period,
             reward_bump: bumps.reward_mint,
-            bump: bumps.config
+            bump: bumps.config,  
         });
         Ok(())
     }

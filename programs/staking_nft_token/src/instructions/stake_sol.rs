@@ -1,10 +1,11 @@
 use anchor_lang::{prelude::*, system_program::{transfer, Transfer}};
-use anchor_spl::token::{mint_to, spl_token::native_mint, Mint, MintTo, Token, TokenAccount};
+use anchor_spl::token::{mint_to, spl_token::{instruction, native_mint}, Mint, MintTo, Token, TokenAccount};
 
 use crate::state::{StakeConfigAccount, UserAccount, StakeAccount};
 use crate::error::ErrorCode;
 
 #[derive(Accounts)]
+#[instruction(seed: u64)]
 pub struct StakeSol<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
@@ -28,7 +29,7 @@ pub struct StakeSol<'info> {
         init,
         payer = user,
         space = 8 + StakeAccount::INIT_SPACE,
-        seeds = [b"stake", config.key().as_ref(), user.key().as_ref()],
+        seeds = [b"stake", config.key().as_ref(), user.key().as_ref(),seed.to_le_bytes().as_ref()],
         bump
     )]
     pub stake_account: Account<'info, StakeAccount>,
@@ -59,7 +60,7 @@ pub struct StakeSol<'info> {
 }
 
 impl<'info> StakeSol<'info> {
-    pub fn stake_sol(&mut self, amount: u64, bumps: &StakeSolBumps) -> Result<()> {
+    pub fn stake_sol(&mut self,seed: u64,amount: u64, bumps: &StakeSolBumps) -> Result<()> {
         let cpi_program = self.system_program.to_account_info();
         let cpi_accounts = Transfer {
             from: self.user.to_account_info(),
@@ -82,6 +83,7 @@ impl<'info> StakeSol<'info> {
             staked_at: Clock::get()?.unix_timestamp,
             bump: bumps.stake_account,
             vault_bump: bumps.vault,
+            seed
         });
         Ok(())
     }

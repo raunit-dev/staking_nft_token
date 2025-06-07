@@ -5,7 +5,7 @@ use crate::state::{StakeConfigAccount, UserAccount, StakeAccount};
 use crate::error::ErrorCode;
 
 #[derive(Accounts)]
-pub struct UnStakeSPL<'info> {
+pub struct UnStakeSpL<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -65,7 +65,7 @@ pub struct UnStakeSPL<'info> {
     pub system_program: Program<'info, System>,
 } 
 
-impl<'info> UnStakeSPL<'info> {
+impl<'info> UnStakeSpL<'info> {
     pub fn unstake_spl(&mut self) -> Result<()> {
         let staked_at = self.stake_account.staked_at;
         let current = Clock::get()?.unix_timestamp;

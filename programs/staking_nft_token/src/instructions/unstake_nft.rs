@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{metadata::{mpl_token_metadata::instructions::{ ThawDelegatedAccountCpi, ThawDelegatedAccountCpiAccounts}, MasterEditionAccount, Metadata, MetadataAccount}, token::{ revoke, Mint, Revoke, Token, TokenAccount}};
 
-use crate::{error::ErrorCode, StakeAccount, StateConfig, UserAccount};
+use crate::{error::ErrorCode, StakeAccount, StakeConfigAccount, UserAccount};
 
 #[derive(Accounts)]
 pub struct UnStakeNFT<'info> {
@@ -22,7 +22,7 @@ pub struct UnStakeNFT<'info> {
     #[account(
         mut,
         seeds = [b"rewards", config.key().as_ref()],
-        bump = config.rewards_bump,
+        bump = config.reward_bump,
         mint::authority = config,
     )]
     pub reward_mint: Account<'info, Mint>,
@@ -74,7 +74,7 @@ pub struct UnStakeNFT<'info> {
         seeds = [b"config"],
         bump = config.bump,
     )]
-    pub config: Account<'info, StateConfig>,
+    pub config: Account<'info, StakeConfigAccount>,
 
     #[account(
         mut,
@@ -136,7 +136,7 @@ impl<'info> UnStakeNFT<'info> {
 
         revoke(cpi_ctx)?;
 
-        self.user_account.nft_staked_amount = self.user_account.nft_staked_amount.checked_sub(1).ok_or(ErrorCode::OverFlow)?;
+        self.user_account.nft_staked_amount = self.user_account.nft_staked_amount.checked_sub(1).ok_or(ErrorCode::Overflow)?;
 
         Ok(())
     }

@@ -17,6 +17,8 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
+import { BN } from "bn.js";
+import { randomBytes } from "crypto"
 
 describe("staking_nft_token", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -31,9 +33,14 @@ describe("staking_nft_token", () => {
   let rewardMint: PublicKey;
   let userRewardAta: PublicKey;
   let userAccount: PublicKey;
-  let userStakeAccount: PublicKey;
-  let solVault: PublicKey;
+  let stakeAccount: PublicKey;
+  let vault: PublicKey;
   let rewardMintPda: PublicKey;
+  let splMint: PublicKey;
+  let splStakeAccount: PublicKey;
+  let vaultAta: PublicKey;
+
+  let seed = new BN(randomBytes(8));
 
   const [config] = PublicKey.findProgramAddressSync(
     [Buffer.from("config")],
@@ -80,17 +87,18 @@ describe("staking_nft_token", () => {
       programId
     );
 
-    [userStakeAccount] = PublicKey.findProgramAddressSync(
+    [stakeAccount] = PublicKey.findProgramAddressSync(
       [
-        Buffer.from("stake_account"),
-        user.publicKey.toBuffer(),
+        Buffer.from("stake"),
         config.toBuffer(),
+        user.publicKey.toBuffer(),
+        seed.toArrayLike(Buffer, "le", 8)
       ],
       programId
     );
 
-    [solVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from("vault"), userAccount.toBuffer()],
+    [vault] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), stakeAccount.toBuffer()],
       programId
     );
 
@@ -103,7 +111,7 @@ describe("staking_nft_token", () => {
   it("initialized config", async () => {
     try {
       const tx = await program.methods
-        .initConfig(8, 4, 2, 86400)
+        .initializeConfig(8, 4, 2, 86400)
         .accountsPartial({
           admin: admin.publicKey,
           config: config,
@@ -130,7 +138,7 @@ describe("staking_nft_token", () => {
 
   it("initialize user", async () => {
     const txSig = await program.methods
-      .initUser()
+      .initializeUser()
       .accountsPartial({
         user: user.publicKey,
         userAccount,
@@ -152,16 +160,15 @@ describe("staking_nft_token", () => {
 
     const stakeAmount = 1 * LAMPORTS_PER_SOL;
     const txSig = await program.methods
-      .stakeSol(new anchor.BN(stakeAmount))
+      .stakeSol(seed,new anchor.BN(stakeAmount))
       .accountsPartial({
         user: user.publicKey,
         rewardMint: rewardMintPda,
-        stakeMint: rewardMintPda,
-        stakeConfig: config,
-        userStakeAccount,
+        config: config,
+        stakeAccount,
         userAccount,
         userRewardAta: userRewardAtaAccount.address,
-        solVault,
+        vault,
         systemProgram: SystemProgram.programId,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
@@ -169,5 +176,196 @@ describe("staking_nft_token", () => {
       .rpc();
     await confirm(txSig);
     await log(txSig);
+  });
+
+  it("stake spl", async () => {
+    // Create a new SPL mint
+    splMint = await createMint(
+      connection,
+      admin,
+      admin.publicKey,
+      null,
+      6 // decimals
+    );
+
+    // Create user's ATA for the SPL mint
+    const userSplAta = await getOrCreateAssociatedTokenAccount(
+      connection,
+      user,
+      splMint,
+      user.publicKey
+    );
+
+    // Mint SPL tokens to user
+    await mintTo(
+      connection,
+      admin,
+      splMint,
+      userSplAta.address,
+      admin,
+      1_000_000 // 1 token (with 6 decimals)
+    );
+
+    // Derive stake_account PDA for SPL
+    [splStakeAccount] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("stake"),
+        config.toBuffer(),
+        user.publicKey.toBuffer(),
+        splMint.toBuffer(),
+      ],
+      programId
+    );
+
+    // Derive vault_ata PDA for SPL
+    vaultAta = getAssociatedTokenAddressSync(
+      splMint,
+      splStakeAccount,
+      true
+    );
+
+    // User's reward ATA for reward mint
+    const userRewardAtaAccount = await getOrCreateAssociatedTokenAccount(
+      connection,
+      user,
+      rewardMintPda,
+      user.publicKey
+    );
+
+    const stakeAmount = 500_000; // 0.5 SPL token
+    const txSig = await program.methods
+      .stakeSpl(new anchor.BN(12345), new anchor.BN(stakeAmount))
+      .accountsPartial({
+        user: user.publicKey,
+        mint: splMint,
+        mintAta: userSplAta.address,
+        rewardMint: rewardMintPda,
+        userRewardAta: userRewardAtaAccount.address,
+        stakeAccount: splStakeAccount,
+        config: config,
+        vaultAta: vaultAta,
+        userAccount: userAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+    await confirm(txSig);
+    await log(txSig);
+    console.log("SPL staked successfully!");
+    const userAcc = await program.account.userAccount.fetch(userAccount);
+    console.log("User account after SPL stake:", userAcc);
+  });
+
+  it("unstake sol", async () => {
+    // Simulate freeze period passed by manipulating the clock (or by direct state update in local/test env)
+    // For now, just try the call (may need to update the stake_account's staked_at if running locally)
+    // Derive the stake_account PDA for SOL
+    // (already derived as stakeAccount in before hook)
+    // User's reward ATA for reward mint
+    const userRewardAtaAccount = await getOrCreateAssociatedTokenAccount(
+      connection,
+      user,
+      rewardMintPda,
+      user.publicKey
+    );
+
+    // const splMint = await createMint(
+    //   connection,
+    //   admin,
+    //   admin.publicKey,
+    //   null,
+    //   6 // decimals
+    // );
+
+    // const [splStakeAccount] = PublicKey.findProgramAddressSync(
+    //   [
+    //     Buffer.from("stake"),
+    //     config.toBuffer(),
+    //     user.publicKey.toBuffer(),
+    //     splMint.toBuffer(),
+    //   ],
+    //   programId
+    // );
+
+
+    // Derive vault PDA for SOL
+    // const vaultAta = getAssociatedTokenAddressSync(
+    //   splMint,
+    //   splStakeAccount,
+    //   true
+    // )
+    const txSig = await program.methods
+      .unstakeSol()
+      .accountsPartial({
+        user: user.publicKey,
+        mint: rewardMintPda, // using rewardMint as placeholder, adjust if needed
+        rewardMint: rewardMintPda,
+        userRewardAta: userRewardAtaAccount.address,
+        stakeAccount: stakeAccount,
+        config: config,
+        vault,
+        userAccount: userAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+    await confirm(txSig);
+    await log(txSig);
+    console.log("SOL unstaked successfully!");
+    const userAcc = await program.account.userAccount.fetch(userAccount);
+    console.log("User account after SOL unstake:", userAcc);
+  });
+
+  it("unstake spl", async () => {
+    // Use the stored SPL mint and stake account from the stake_spl test
+    const userRewardAtaAccount = await getOrCreateAssociatedTokenAccount(
+      connection,
+      user,
+      rewardMintPda,
+      user.publicKey
+    );
+
+    splMint = await createMint(
+      connection,
+      admin,
+      admin.publicKey,
+      null,
+      6 // decimals
+    );
+
+    // Create user's ATA for the SPL mint
+    const userSplAta = await getOrCreateAssociatedTokenAccount(
+      connection,
+      user,
+      splMint,
+      user.publicKey
+    );
+
+
+    const txSig = await program.methods
+      .unstakeSpl()
+      .accountsPartial({
+        user: user.publicKey,
+        mint: splMint, // Using the stored splMint
+        mintAta: userSplAta.address, // Using the stored userSplAta
+        rewardMint: rewardMintPda,
+        userRewardAta: userRewardAtaAccount.address,
+        stakeAccount: splStakeAccount, // Using the stored splStakeAccount
+        config: config,
+        vaultAta: vaultAta, // Using the stored vaultAta
+        userAccount: userAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+    await confirm(txSig);
+    await log(txSig);
+    console.log("SPL unstaked successfully!");
+    const userAcc = await program.account.userAccount.fetch(userAccount);
+    console.log("User account after SPL unstake:", userAcc);
   });
 });
